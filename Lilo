@@ -1,0 +1,86 @@
+import openai
+import re
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+
+openai.api_key = ""
+
+# Initialize the dictionary to store user information
+user_info = {}
+
+# Initialize the lists to store previous questions and words
+previous_questions = []
+previous_words = []
+
+# Download the NLTK resources
+nltk.download('vader_lexicon')
+
+def generate_response(prompt):
+    # Use the global variable user_info inside the function
+    global user_info
+
+    model = "text-davinci-002"
+    response = openai.Completion.create(
+        engine=model,
+        prompt=prompt,
+        max_tokens=2048, # Increase the max_tokens parameter
+        n=1,
+        stop=None,
+        temperature=0.5,
+        presence_penalty=0.5,
+        frequency_penalty=0.5,
+        best_of=1, # Use Inferential Learning
+
+    )
+
+    message = response.choices[0].text.strip()
+    message = re.sub('[^0-9a-zA-Z\n\.\?,!]+', ' ', message)
+
+    # Use the information in user_info to personalize the response
+    for info_type, info_value in user_info.items():
+        message = message.replace(f"[{info_type}]", info_value)
+
+    # Use the sentiment analyzer to analyze the sentiment of the response
+    sia = SentimentIntensityAnalyzer()
+    sentiment = sia.polarity_scores(message)
+
+    # Use the reminders function to generate reminders based on the response
+    reminders = get_reminders(message)
+
+    return message,  sentiment , reminders
+
+def get_reminders(message):
+    # Implement your reminder logic here
+    reminders = []
+    # ...
+    return reminders
+
+while True:
+    # Prompt the user to enter a question
+    question = input("Ask me a question: ")
+
+    # If the user asks for the script's name, respond with "Atmosphere"
+    if "your name" in question.lower():
+        answer = "My name is Atmosphere."
+
+    # If the user provides their name, remember it
+    elif "my name is" in question.lower():
+        name = question.lower().split("my name is")[1].strip()
+        user_info["name"] = name
+        answer = f"Nice to meet you, {name}!"
+
+    # Generate the response using the OpenAI API
+    else:
+        prompt = f"Q: {question}\nA:"
+        answer, sentiment, reminders = generate_response(prompt)
+
+        # Store the question and words in the list of previous questions and words
+        previous_questions.append(question)
+        previous_words.append(question)
+
+        # Print the sentiment and reminders
+        print(f"Sentiment: {sentiment}")
+        print(reminders)
+
+    # Print the answer
+    print(answer)
